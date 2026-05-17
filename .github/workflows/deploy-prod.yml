@@ -1,0 +1,62 @@
+name: Deploy Production
+
+# WANN startet dieser Workflow?
+# NUR wenn ein Tag gepusht wird der mit "v" beginnt (z.B. v1.0.0)
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # Schritt 1: Slack - "Pipeline gestartet"
+      - name: Slack Startmeldung
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "🚀 *Production-Pipeline gestartet*\n👤 Gestartet von: ${{ github.actor }}\n📋 Workflow: ${{ github.workflow }}\n🏷️ Tag: ${{ github.ref_name }}"
+          }'
+
+      # Schritt 2: Code holen
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Schritt 3: SSH Key einrichten
+      - name: SSH Key einrichten
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_IPS_PROD }} >> ~/.ssh/known_hosts
+
+      # Schritt 4: Deploy auf Production
+      - name: Deploy auf Production
+        run: |
+          scp -i ~/.ssh/id_rsa \
+            frontend/index.html \
+            ubuntu@${{ secrets.EC2_IPS_PROD }}:/var/www/html/index.html
+
+      # Schritt 5a: Slack Erfolg
+      - name: Slack Erfolgsmeldung
+        if: ${{ success() }}
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "✅ *Production erfolgreich deployed!*\n👤 Gestartet von: ${{ github.actor }}\n🏷️ Version: ${{ github.ref_name }}\n🌐 URL: http://${{ secrets.EC2_IPS_PROD }}"
+          }'
+
+      # Schritt 5b: Slack Fehler
+      - name: Slack Fehlermeldung
+        if: ${{ failure() }}
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "❌ *Production-Deployment FEHLGESCHLAGEN!*\n👤 Gestartet von: ${{ github.actor }}\n🏷️ Version: ${{ github.ref_name }}\n🔍 Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }'

@@ -1,0 +1,65 @@
+name: Deploy Staging
+
+# WANN startet dieser Workflow?
+# Bei jedem Push auf den main-Branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest   # GitHub startet eine frische Ubuntu-VM für uns
+
+    steps:
+
+      # Schritt 1: Slack - "Pipeline gestartet"
+      - name: Slack Startmeldung
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "🚀 *Staging-Pipeline gestartet*\n👤 Gestartet von: ${{ github.actor }}\n📋 Workflow: ${{ github.workflow }}\n🔗 Commit: ${{ github.sha }}"
+          }'
+
+      # Schritt 2: Code aus dem Repo holen
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        # Das ist wie ein "git clone" – die VM hat vorher noch keinen Code
+
+      # Schritt 3: SSH Key einrichten
+      - name: SSH Key einrichten
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # EC2 Host zum known_hosts hinzufügen (verhindert "Are you sure?" Prompt)
+          ssh-keyscan -H ${{ secrets.EC2_IP_STAGING }} >> ~/.ssh/known_hosts
+
+      # Schritt 4: index.html auf Staging-Server kopieren
+      - name: Deploy auf Staging
+        run: |
+          scp -i ~/.ssh/id_rsa \
+            frontend/index.html \
+            ubuntu@${{ secrets.EC2_IP_STAGING }}:/var/www/html/index.html
+        # scp = "secure copy" – kopiert Dateien über SSH
+
+      # Schritt 5a: Slack - Erfolg (nur wenn alles geklappt hat)
+      - name: Slack Erfolgsmeldung
+        if: ${{ success() }}
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "✅ *Staging erfolgreich deployed!*\n👤 Gestartet von: ${{ github.actor }}\n📋 Workflow: ${{ github.workflow }}\n🌐 URL: http://${{ secrets.EC2_IP_STAGING }}"
+          }'
+
+      # Schritt 5b: Slack - Fehler (nur wenn etwas schiefgelaufen ist)
+      - name: Slack Fehlermeldung
+        if: ${{ failure() }}
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK_URL }} \
+          -H 'Content-type: application/json' \
+          --data '{
+            "text": "❌ *Staging-Deployment FEHLGESCHLAGEN!*\n👤 Gestartet von: ${{ github.actor }}\n📋 Workflow: ${{ github.workflow }}\n🔍 Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }'

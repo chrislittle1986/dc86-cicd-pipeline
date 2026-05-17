@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DC86 CI/CD Pipeline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0e0e0e;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            border: 1px solid #9146ff;
+            border-radius: 12px;
+            max-width: 500px;
+            background: #1a1a2e;
+        }
+
+        h1 {
+            color: #9146ff;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #9146ff;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 0.5rem 0;
+        }
+
+        .info {
+            margin-top: 1.5rem;
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        .version {
+            color: #9146ff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>⚡ DC86 Pipeline</h1>
+        <span class="badge">STAGING</span>
+        <p style="margin-top: 1rem;">Diese Seite wurde automatisch deployed via GitHub Actions.</p>
+        <div class="info">
+            <p>Version: <span class="version">1.0.0</span></p>
+            <p>Deployed by: GitHub Actions</p>
+            <p>Environment: Staging</p>
+        </div>
+    </div>
+</body>
+
+</html>
